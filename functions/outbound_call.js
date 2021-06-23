@@ -109,6 +109,7 @@ exports.handler = function (context, event, callback) {
     dial.number(
       {
         callerId: fromE164Normalized,
+        answerOnBridge: true,
         statusCallbackEvent: "answered completed",
         statusCallback: `${process.env.STATUS_CALLBACK}?projectid=${payload.projectid}`,
         statusCallbackMethod: "POST",
