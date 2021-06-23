@@ -101,61 +101,41 @@ exports.handler = function (context, event, callback) {
   } else {
     // or Dial PSTN
     console.log("Dialing a PSTN Number");
-    const say = `<Response><Say>Hi. We wanted to say ${defaultMessage}</Say></Response>`;
-    client.calls
-      .create({
-        to: toE164Normalized,
-        from: fromE164Normalized,
-        twiml: say,
-        statusCallback: process.env.STATUS_CALLBACK,
-      })
-      .then((call) => {
-        writeCallLogtoSync(call, payload).then((res) => {
-          console.log(res);
-          callback(null, `Success! Call SID: ${res}`);
-        });
-      })
-      .catch((error) => {
-        console.error(error);
-        callback(error);
-      });
+    let twiml = new Twilio.twiml.VoiceResponse();
+    const dial = twiml.dial({
+      answerOnBridge: true,
+      callerId: fromE164Normalized,
+    });
+    dial.number(
+      {
+        callerId: fromE164Normalized,
+        statusCallbackEvent: "answered completed",
+        statusCallback: `${process.env.STATUS_CALLBACK}?projectid=${payload.projectid}`,
+        statusCallbackMethod: "POST",
+      },
+      toE164Normalized
+    );
+    callback(null, twiml);
+
+    // const twiml = `<Response><Dial answerOnBridge="true"></Dial></Response>`;
+    // Unfortunately, initiating a new outbound call from the API will not mimick <DIAL> so
+    // we need to issue a DIAL with a Status Callback to retrieve the call details
+    // client.calls
+    //   .create({
+    //     to: toE164Normalized,
+    //     from: fromE164Normalized,
+    //     twiml: `<Response><Say>Hello</Say></Response>`,
+    //     statusCallback: process.env.STATUS_CALLBACK,
+    //   })
+    //   .then((call) => {
+    //     writeCallLogtoSync(call, payload).then((res) => {
+    //       console.log(res);
+    //       callback(null, `<Response></Response>`);
+    //     });
+    //   })
+    //   .catch((error) => {
+    //     console.error(error);
+    //     callback(error);
+    //   });
   }
 };
-
-/**
- * Write Call Data to a SyncMap
- * Creates a Sync Service if name from .ENV isn't found
- *
- * @param {string} call The Call data we want to write to Sync
- * @returns {Object} Sync Service Object
- */
-async function writeCallLogtoSync(call, payload) {
-  //console our outbound call event
-  console.log("Outbound Call Event");
-  console.log(call);
-
-  // Create a tailored object to write to Sync
-  let syncdata = {
-    from: call.from,
-    to: call.to,
-    ...payload,
-  };
-  // Write tokens to SyncMap
-  try {
-    let syncservice = await sync.fetchSyncService(process.env.SYNC_NAME);
-    let syncmap = await sync.fetchSyncMap(
-      syncservice.sid,
-      process.env.SYNC_NAME
-    );
-    let syncmapitem = await sync.createOrupdateMapItem(
-      syncservice.sid,
-      syncmap.sid,
-      call.sid,
-      syncdata
-    );
-    return syncmapitem;
-  } catch (err) {
-    console.log(err);
-    return Promise.reject(err);
-  }
-}

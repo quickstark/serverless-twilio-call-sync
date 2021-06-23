@@ -18,11 +18,18 @@ exports.handler = function (context, event, callback) {
   const client = context.getTwilioClient();
 
   // console our event
-  console.log("Callback Event on Complete");
+  console.log("Callback Event Data");
   console.log(event);
 
   // get the CallSID (this is the key to the SyncMap)
   const callsid = event.CallSid;
+
+  if (event.CallStatus == "in-progress") {
+    writeCallLogtoSync(callsid, event).then((res) => {
+      console.log(res);
+      callback(null, `Written: ${res}`);
+    });
+  }
 
   if (event.CallStatus == "completed") {
     removeCallfromSync(callsid).then((res) => {
@@ -31,6 +38,43 @@ exports.handler = function (context, event, callback) {
     });
   }
 };
+
+/**
+ * Write Call Data to a SyncMap
+ * Creates a Sync Service if name from .ENV isn't found
+ *
+ * @param {string} call The Call data we want to write to Sync
+ * @returns {Object} Sync Service Object
+ */
+async function writeCallLogtoSync(key, event) {
+  //console our outbound event event
+  console.log("Outbound event Event");
+  console.log(event);
+
+  // Create a tailored object to write to Sync
+  let syncdata = {
+    from: event.from,
+    to: event.to,
+  };
+  // Write tokens to SyncMap
+  try {
+    let syncservice = await sync.fetchSyncService(process.env.SYNC_NAME);
+    let syncmap = await sync.fetchSyncMap(
+      syncservice.sid,
+      process.env.SYNC_NAME
+    );
+    let syncmapitem = await sync.createOrupdateMapItem(
+      syncservice.sid,
+      syncmap.sid,
+      key,
+      event
+    );
+    return syncmapitem;
+  } catch (err) {
+    console.log(err);
+    return Promise.reject(err);
+  }
+}
 
 /**
  * Delete Call Data to a SyncMap
