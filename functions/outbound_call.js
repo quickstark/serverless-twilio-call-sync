@@ -111,7 +111,7 @@ exports.handler = function (context, event, callback) {
         callerId: fromE164Normalized,
         answerOnBridge: true,
         statusCallbackEvent: "answered completed",
-        statusCallback: `${process.env.STATUS_CALLBACK}?projectid=${payload.projectid}`,
+        statusCallback: `${process.env.BASE_URL}/sync_callback?projectid=${payload.projectid}`,
         statusCallbackMethod: "POST",
       },
       toE164Normalized

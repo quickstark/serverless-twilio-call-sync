@@ -5,8 +5,8 @@ const syncpath = Runtime.getFunctions().sync.path;
 const sync = require(syncpath);
 
 /**
- * Function to cleanup a Sync Map Item
- * Will delete call attributes from the SyncMap name defined in .ENV
+ * Protected Function to fetch a Sync Map Item
+ * You *must* include a valid X-Twilio-Signature Header to access this function externally
  *
  * @param {Object} context Twilio Context Object (see docs)
  * @param {Object} event Inbound event payload
